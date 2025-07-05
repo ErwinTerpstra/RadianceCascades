@@ -54,9 +54,20 @@ namespace RunaeMystica.Rendering
 					builder.SetRenderFunc<PassData>((passData, ctx) => { });
 				}
 
+				// Determine the diagonal resolution
+				int width = colorDescriptor.width;
+				int height = colorDescriptor.height;
+				float diagonal = Mathf.Sqrt(
+					width * width + height * height
+				);
+
+				// Our calculation for number of cascades
+				int cascadeCount = Mathf.CeilToInt(
+					Mathf.Log(diagonal) / Mathf.Log(settings.rayCount)
+				) + 1;	
+
 				TextureHandle previous = rcBufferA;
-				int passCount = 2;
-				for (int i = passCount; i >= 1; --i)
+				for (int i = cascadeCount - 1; i >= 0; --i)
 				{
 					int baseRayCount = settings.rayCount;
 					int rayCount = (int) Mathf.Pow(baseRayCount, i);
@@ -65,10 +76,13 @@ namespace RunaeMystica.Rendering
 					materialProperties.SetInt("_BaseRayCount", baseRayCount);
 					materialProperties.SetInt("_RayCount", rayCount);
 					materialProperties.SetInt("_MaxSteps", settings.maxSteps);
-					materialProperties.SetFloat("_IntervalSplit", settings.intervalSplit);
+
+					materialProperties.SetInt("_CascadeIndex", i);
+					materialProperties.SetInt("_CascadeCount", cascadeCount);
+
 					//materialProperties.SetTexture("_EmissionSDF", contextData.emissionSdf);
 
-					TextureHandle target = (passCount - i) % 2 == 0 ? rcBufferB : rcBufferA;
+					TextureHandle target = (cascadeCount - 1 - i) % 2 == 0 ? rcBufferB : rcBufferA;
 
 					renderGraph.AddBlitPass(new RenderGraphUtils.BlitMaterialParameters
 					(

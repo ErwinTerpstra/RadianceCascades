@@ -31,11 +31,12 @@ Shader "Hidden/RadianceCascades"
 		SAMPLER(sampler_EmissionSDF);
 		float4 _EmissionSDF_TexelSize;
 
-		int _RayCount;
 		int _MaxSteps;
 
 		int _BaseRayCount;
-		float _IntervalSplit;
+
+		int _CascadeIndex;
+		int _CascadeCount;
 		ENDHLSL
 
 		Pass
@@ -64,16 +65,19 @@ Shader "Hidden/RadianceCascades"
 				// Distinct random value for every pixel
 				float noise = 0.5;//rand(uv);
 
-				float4 radiance = 0;
-
-				bool isLastLayer = _RayCount == _BaseRayCount;
+				
 				float sqrtBase = sqrt(float(_BaseRayCount));
+				
+				int rayCount = pow(_BaseRayCount, _CascadeIndex + 1);
+
+				// Calculate the size of our angle step
+				float angleStepSize = TAU / float(rayCount);
+
 				
     			float2 pixel = floor(uv * resolution);
 
 				// The width / space between probes
-				// If our `baseRayCount` is 16, this is 4 on the upper cascade or 1 on the lower.
-				float probeGridSize = isLastLayer ? 1.0 : sqrtBase;
+				float probeGridSize = pow(sqrtBase, _CascadeIndex);
 				
 				// Calculate the number of probes per x/y dimension
 				float2 probePixelSize = floor(resolution / probeGridSize);
@@ -87,22 +91,21 @@ Shader "Hidden/RadianceCascades"
 				// Calculate the index of the set of rays we're processing
 				float baseIndex = float(_BaseRayCount) * (probeGridIndex.x + (probeGridSize * probeGridIndex.y));
 				
-				// Calculate the size of our angle step
-				float angleStepSize = TAU / float(_RayCount);
-				
 				// Find the center of the probe we're processing
 				float2 probeCenter = (probeRelativePosition + 0.5) * probeGridSize;
     			float2 normalizedProbeCenter = probeCenter * oneOverResolution;
 
-				float scale = isLastLayer ? 1 : 2;
-				float oneOverScale = 1.0 / scale;
+				float shortestSide = min(resolution.x, resolution.y);
+    			float2 aspectScale = shortestSide * oneOverResolution;
 
-    			float2 aspectScale = min(resolution.x, resolution.y) * oneOverResolution;
+				float intervalStart = _CascadeIndex == 0 ? 0.0 : pow(_BaseRayCount, _CascadeIndex - 1) / shortestSide;
+				float intervalEnd = pow(_BaseRayCount, _CascadeIndex) / shortestSide;
 
-				float intervalStart = isLastLayer ? 0.0 : _IntervalSplit;
-				float intervalEnd = isLastLayer ? _IntervalSplit : sqrt(2.0);
-
+				// Stepping less than half a pixel is not usefull
 				float minStepDist = min(oneOverResolution.x, oneOverResolution.y) * 0.5;
+
+				// Accumulate radiance over all rays
+				float4 radiance = 0;
 
 				[loop]
 				for(int i = 0; i < _BaseRayCount; i++) 
@@ -143,10 +146,10 @@ Shader "Hidden/RadianceCascades"
 					}
 
 					// If nothing was hit, merge with previous layer
-					if (radianceAccum.a == 0 && isLastLayer)
+					if (radianceAccum.a == 0 && _CascadeIndex < (_CascadeCount - 1))
 					{						
 						// Grid of probes
-						float upperProbeGridSize = sqrtBase;
+						float upperProbeGridSize = pow(sqrtBase, _CascadeIndex + 1);
 						float2 upperProbeSize = floor(resolution / upperProbeGridSize);
 
 						// Index of the upper cascade probe to read, based on the index of the ray we are currently processing
@@ -155,7 +158,12 @@ Shader "Hidden/RadianceCascades"
 						// Center of the upper probe that we'll read
 						float2 upperProbePosition = upperProbeIndex * upperProbeSize;
 
+						// Determine the position in the next probe
 						float2 offset = (probeRelativePosition + 0.5) / sqrtBase;
+
+						// Clamp between 0.5 and size - 0.5 to prevent 'bleeding' of the neighbour probe
+						offset = clamp(offset, float2(0.5, 0.5), upperProbeSize - 0.5);
+
 						float2 upperUV = (upperProbePosition + offset) / resolution;
 
 						radianceAccum += SAMPLE_TEXTURE2D(_BlitTexture, sampler_BlitTexture, upperUV);

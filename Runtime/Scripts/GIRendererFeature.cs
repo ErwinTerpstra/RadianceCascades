@@ -39,9 +39,6 @@ namespace RunaeMystica.Rendering
 
 			public int maxSteps = 64;
 
-			[Range(0.0f, 1.0f)]
-			public float intervalSplit = 0.125f;
-
 			public bool bilinearSampling = false;
 		}
 
