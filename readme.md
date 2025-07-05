@@ -2,6 +2,8 @@
 
 Real-time 2D global illumination through radiance cascades. Built with the Unity SRP Render Graph system.
 
+<img src="Documentation~/Screenshot.jpg" width="300">
+
 ## Usage
 
 1. Add the "2D GI" renderer feature to your URP renderer
