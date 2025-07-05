@@ -36,11 +36,11 @@ namespace RunaeMystica.Rendering
 		public class Settings
 		{
 			[Range(1, 4)]
-			public int rayCountExponent = 1;
+			public int rayCountExponent = 2;
 
-			public int maxSteps = 64;
+			public int maxSteps = 32;
 
-			public bool bilinearSampling = false;
+			public bool bilinearSampling = true;
 		}
 
 		public class GIContextData : ContextItem
