@@ -130,21 +130,15 @@ Shader "Hidden/RadianceCascades"
 						if (IsOutOfBounds(sampleUV))
 							break;	
 
-						// How far away is the nearest object?
-						float dist = SAMPLE_TEXTURE2D(_EmissionSDF, sampler_EmissionSDF, sampleUV).r;
-
-						
-						// TODO: only sample when within minStepDist
-						if (dist < minStepDist)
+						float4 sample = SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, sampleUV);
+						if (sample.a > 0.9)
 						{
-							float4 sample = SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, sampleUV);
-							if (sample.a > 0.9)
-							{
-								radianceAccum += sample;
-								break;
-							}
+							radianceAccum += sample;
+							break;
 						}
 
+						// How far away is the nearest object?
+						float dist = SAMPLE_TEXTURE2D(_EmissionSDF, sampler_EmissionSDF, sampleUV).r;
 						dist = max(dist, minStepDist);
 
 						//float dist = minStepDist * 2;
