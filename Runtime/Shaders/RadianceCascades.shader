@@ -98,8 +98,12 @@ Shader "Hidden/RadianceCascades"
 				float shortestSide = min(resolution.x, resolution.y);
     			float2 aspectScale = shortestSide * oneOverResolution;
 
-				float intervalStart = _CascadeIndex == 0 ? 0.0 : pow(_BaseRayCount, _CascadeIndex - 1) / shortestSide;
-				float intervalEnd = pow(_BaseRayCount, _CascadeIndex) / shortestSide;
+				// Hand-wavy rule that improved smoothing of other base ray counts
+				float modifierHack = _BaseRayCount < 16 ? 1.0 : 4.0;
+
+				// Determine interval for rays in this cascade
+				float intervalStart = _CascadeIndex == 0 ? 0.0 : modifierHack * pow(_BaseRayCount, _CascadeIndex - 1) / shortestSide;
+				float intervalEnd = modifierHack * pow(_BaseRayCount, _CascadeIndex) / shortestSide;
 
 				// Stepping less than half a pixel is not usefull
 				float minStepDist = min(oneOverResolution.x, oneOverResolution.y) * 0.5;

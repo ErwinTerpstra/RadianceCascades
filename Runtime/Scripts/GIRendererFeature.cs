@@ -35,7 +35,8 @@ namespace RunaeMystica.Rendering
 		[Serializable]
 		public class Settings
 		{
-			public int rayCount = 32;
+			[Range(1, 4)]
+			public int rayCountExponent = 1;
 
 			public int maxSteps = 64;
 

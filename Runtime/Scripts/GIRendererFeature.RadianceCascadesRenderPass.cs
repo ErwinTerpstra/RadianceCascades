@@ -62,19 +62,16 @@ namespace RunaeMystica.Rendering
 				);
 
 				// Our calculation for number of cascades
+				int baseRayCount = (int) Mathf.Pow(4, settings.rayCountExponent);
 				int cascadeCount = Mathf.CeilToInt(
-					Mathf.Log(diagonal) / Mathf.Log(settings.rayCount)
+					Mathf.Log(diagonal) / Mathf.Log(baseRayCount)
 				) + 1;	
 
 				TextureHandle previous = rcBufferA;
 				for (int i = cascadeCount - 1; i >= 0; --i)
 				{
-					int baseRayCount = settings.rayCount;
-					int rayCount = (int) Mathf.Pow(baseRayCount, i);
-
 					MaterialPropertyBlock materialProperties = new MaterialPropertyBlock();
 					materialProperties.SetInt("_BaseRayCount", baseRayCount);
-					materialProperties.SetInt("_RayCount", rayCount);
 					materialProperties.SetInt("_MaxSteps", settings.maxSteps);
 
 					materialProperties.SetInt("_CascadeIndex", i);
