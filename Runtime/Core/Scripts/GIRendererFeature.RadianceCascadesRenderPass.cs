@@ -35,7 +35,7 @@ namespace RunaeMystica.Rendering
 
 				TextureDesc colorDescriptor = resourceData.activeColorTexture.GetDescriptor(renderGraph);
 
-				var rcDesc = new RenderTextureDescriptor(colorDescriptor.width, colorDescriptor.height, RenderTextureFormat.ARGBFloat);
+				var rcDesc = new RenderTextureDescriptor(colorDescriptor.width, colorDescriptor.height, RenderTextureFormat.ARGB2101010);
 				rcDesc.sRGB = true;
 
 				FilterMode filterMode = settings.bilinearSampling ? FilterMode.Bilinear : FilterMode.Point;
@@ -65,7 +65,7 @@ namespace RunaeMystica.Rendering
 				int baseRayCount = (int) Mathf.Pow(4, settings.rayCountExponent);
 				int cascadeCount = Mathf.CeilToInt(
 					Mathf.Log(diagonal) / Mathf.Log(baseRayCount)
-				) + 1;	
+				);	
 
 				TextureHandle previous = rcBufferA;
 				for (int i = cascadeCount - 1; i >= 0; --i)
@@ -76,8 +76,6 @@ namespace RunaeMystica.Rendering
 
 					materialProperties.SetInt("_CascadeIndex", i);
 					materialProperties.SetInt("_CascadeCount", cascadeCount);
-
-					//materialProperties.SetTexture("_EmissionSDF", contextData.emissionSdf);
 
 					TextureHandle target = (cascadeCount - 1 - i) % 2 == 0 ? rcBufferB : rcBufferA;
 

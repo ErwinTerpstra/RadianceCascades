@@ -62,10 +62,6 @@ Shader "Hidden/RadianceCascades"
 				float2 resolution = _EmissionMap_TexelSize.zw;
 				float2 oneOverResolution = _EmissionMap_TexelSize.xy;
 
-				// Distinct random value for every pixel
-				float noise = 0.5;//rand(uv);
-
-				
 				float sqrtBase = sqrt(float(_BaseRayCount));
 				
 				int rayCount = pow(_BaseRayCount, _CascadeIndex + 1);
@@ -73,7 +69,6 @@ Shader "Hidden/RadianceCascades"
 				// Calculate the size of our angle step
 				float angleStepSize = TAU / float(rayCount);
 
-				
     			float2 pixel = floor(uv * resolution);
 
 				// The width / space between probes
@@ -95,10 +90,11 @@ Shader "Hidden/RadianceCascades"
 				float2 probeCenter = (probeRelativePosition + 0.5) * probeGridSize;
     			float2 normalizedProbeCenter = probeCenter * oneOverResolution;
 
+				// Determine correction for non-square aspect ratios
 				float shortestSide = min(resolution.x, resolution.y);
     			float2 aspectScale = shortestSide * oneOverResolution;
 
-				// Hand-wavy rule that improved smoothing of other base ray counts
+				// By Jason McGhee: Hand-wavy rule that improved smoothing of other base ray counts
 				float modifierHack = _BaseRayCount < 16 ? 1.0 : 4.0;
 
 				// Determine interval for rays in this cascade
@@ -115,7 +111,7 @@ Shader "Hidden/RadianceCascades"
 				for(int i = 0; i < _BaseRayCount; i++) 
 				{
 					float index = baseIndex + float(i);
-					float angle = (index + noise) * angleStepSize;
+					float angle = (index + 0.5) * angleStepSize;
 
 					float2 rayDirectionUV = float2(cos(angle), sin(angle)) * aspectScale;
 					float rayDistance = intervalStart;
@@ -130,21 +126,25 @@ Shader "Hidden/RadianceCascades"
 						if (IsOutOfBounds(sampleUV))
 							break;	
 
-						float4 sample = SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, sampleUV);
-						if (sample.a > 0.9)
-						{
-							radianceAccum += sample;
-							break;
-						}
-
 						// How far away is the nearest object?
 						float dist = SAMPLE_TEXTURE2D(_EmissionSDF, sampler_EmissionSDF, sampleUV).r;
+
+						// Only sample when within minStepDist
+						if (dist < minStepDist)
+						{
+							float4 sample = SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, sampleUV);
+							if (sample.a > 0.9)
+							{
+								radianceAccum += sample;
+								break;
+							}
+						}
+
 						dist = max(dist, minStepDist);
 
-						//float dist = minStepDist * 2;
 						rayDistance += dist;
 
-						// End if we exceeded our max distance or our alpha accumulator is saturated
+						// End if we exceeded our max distance
 						if (rayDistance >= intervalEnd)
 							break;
 					}
@@ -181,11 +181,6 @@ Shader "Hidden/RadianceCascades"
 
 			float4 Fragment(Varyings i) : SV_Target
 			{
-				// float4 sample = SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, i.texcoord);
-				// sample.rgb = sample.rgb * (1 - sample.a);
-				// sample.a = 1.0;
-				// return sample;
-
 				float4 color = RaymarchGI(i.texcoord);
 				return color;
 			}

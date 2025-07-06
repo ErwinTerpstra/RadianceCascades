@@ -1,8 +1,11 @@
 # Radiance Cascades
 
-Real-time 2D global illumination through radiance cascades. Built with the Unity SRP Render Graph system.
+Real-time 2D global illumination through radiance cascades. Built with the Unity SRP Render Graph system. Runs at about 14ms per frame on my RTX 3060 laptop GPU at 1920x1080 and 16 samples per pixel per cascade, or 8ms for 4 samples per pixel per cascade (which still has reasonable quality).
 
-<img src="Documentation~/Screenshot.jpg" width="300">
+<p float="left">
+	<img src="Documentation~/Screenshot01.jpg" width="200">
+	<img src="Documentation~/Screenshot02.jpg" width="200">
+</p>
 
 ## Usage
 

@@ -32,7 +32,7 @@ Shader "Hidden/JumpFlood"
 			float4 FragmentSeed(Varyings i) : SV_Target
 			{
 				float4 sampleValue = SAMPLE_TEXTURE2D(_BlitTexture, sampler_BlitTexture, i.texcoord);
-				return float4(i.texcoord, 0, 1) * (sampleValue.a > 0 ? 1 : 0);
+				return float4(i.texcoord, 0, 1) * (sampleValue.a > 0.9 ? 1 : 0);
 			}
 			ENDHLSL
 		}
@@ -63,7 +63,7 @@ Shader "Hidden/JumpFlood"
 						float4 sampleValue = SAMPLE_TEXTURE2D(_BlitTexture, sampler_BlitTexture, sampleUV);
 						float2 sampleSeed = sampleValue.xy;
 
-						if (sampleValue.a > 0.0) 
+						if (sampleValue.a > 0.0)
 						{
 							float2 diff = sampleSeed - i.texcoord;
 							float dist = dot(diff, diff);
@@ -102,7 +102,7 @@ Shader "Hidden/JumpFlood"
 				float distance = saturate(length(i.texcoord - nearestSeed));
 
 				// Normalize and visualize the distance
-				return float4(distance, distance, distance, 1.0);
+				return distance;
 			}
 			ENDHLSL
 		}

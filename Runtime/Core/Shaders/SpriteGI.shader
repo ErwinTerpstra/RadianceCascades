@@ -49,7 +49,7 @@ Shader "Erwin Terpstra/Sprite (GI)"
         SAMPLER(sampler_MainTex);
 
         TEXTURE2D(_MaskTex);
-        SAMPLER(sampler_MaskTex);
+        SAMPLER(sampler_MaskTex);   
 
         Varyings DefaultVertex(Attributes v)
         {

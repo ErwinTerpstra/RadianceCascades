@@ -34,12 +34,19 @@ namespace RunaeMystica.Rendering
 
 				TextureDesc colorDescriptor = resourceData.activeColorTexture.GetDescriptor(renderGraph);
 
-				var emissionMapDesc = new RenderTextureDescriptor(colorDescriptor.width, colorDescriptor.height, RenderTextureFormat.ARGBFloat);
+				// Emission map buffer
+				var emissionMapDesc = new RenderTextureDescriptor(colorDescriptor.width, colorDescriptor.height, RenderTextureFormat.ARGB2101010);
 				var emissionMap = UniversalRenderer.CreateRenderGraphTexture(renderGraph, emissionMapDesc, "EmissionMap", false);
 
-				var sdfDesc = new RenderTextureDescriptor(colorDescriptor.width, colorDescriptor.height, RenderTextureFormat.ARGBFloat);
-				var sdfBufferA = UniversalRenderer.CreateRenderGraphTexture(renderGraph, sdfDesc, "EmissionSDF_A", false);
-				var sdfBufferB = UniversalRenderer.CreateRenderGraphTexture(renderGraph, sdfDesc, "EmissionSDF_B", false);
+				// Nearest-UV buffers for jump flood
+				var sdfBufferDesc = new RenderTextureDescriptor(colorDescriptor.width, colorDescriptor.height, RenderTextureFormat.ARGB2101010);
+				var sdfBufferA = UniversalRenderer.CreateRenderGraphTexture(renderGraph, sdfBufferDesc, "EmissionSDF_A", false);
+				var sdfBufferB = UniversalRenderer.CreateRenderGraphTexture(renderGraph, sdfBufferDesc, "EmissionSDF_B", false);
+
+				// True single-channel SDF
+				// TODO: this could be single-channel, but I'm getting artifacts when taking R16/RFloat and R8 is too low precision.
+				// Investigate!
+				var sdfDesc = new RenderTextureDescriptor(colorDescriptor.width, colorDescriptor.height, RenderTextureFormat.ARGB2101010);
 				var emissionSdf = UniversalRenderer.CreateRenderGraphTexture(renderGraph, sdfDesc, "EmissionSDF", false);
 
 				var rendererListDesc = new RendererListDesc(new ShaderTagId("EmissionMap"), renderingData.cullResults, cameraData.camera);
@@ -72,15 +79,16 @@ namespace RunaeMystica.Rendering
 				// Jump flood requires log2 passes per pixel in a dimension
 				int jumpFloodPasses = Mathf.CeilToInt(Mathf.Log(Mathf.Max(emissionMapDesc.width, emissionMapDesc.height), 2));
 
+				// Seed our first buffer with the object positions
 				renderGraph.AddBlitPass(new RenderGraphUtils.BlitMaterialParameters
 				(
 					emissionMap, sdfBufferA,
 					jumpFloodMaterial, jumpFloodMaterial.FindPass("Seed")
 				), "GenerateEmissionSDF/Seed");
 
+				// Ping-pong between buffers to fill the entire buffer
 				var sdfSource = sdfBufferA;
 				var sdfDestination = sdfBufferB;
-
 				for (int i = 0; i < jumpFloodPasses; ++i)
 				{
 					MaterialPropertyBlock materialProperties = new MaterialPropertyBlock();
@@ -102,27 +110,6 @@ namespace RunaeMystica.Rendering
 					sdfSource, emissionSdf,
 					jumpFloodMaterial, jumpFloodMaterial.FindPass("ConvertToSDF")
 				), "GenerateEmissionSDF/Convert");
-
-
-				/*
-				using (var builder = renderGraph.AddRasterRenderPass("SetMaterialProperties", out PassData passData))
-				{
-					passData.settings = settings;
-
-					builder.UseAllGlobalTextures(true);
-					builder.AllowPassCulling(false);
-					builder.AllowGlobalStateModification(true);
-
-					builder.SetRenderFunc((PassData passData, RasterGraphContext ctx) =>
-					{
-						ctx.cmd.SetGlobalInt("_RayCount", passData.settings.rayCount);
-						ctx.cmd.SetGlobalInt("_MaxSteps", passData.settings.maxSteps);
-					});
-
-					builder.SetGlobalTextureAfterPass(emissionMap, Shader.PropertyToID("_CameraEmissionTexture"));
-					builder.SetGlobalTextureAfterPass(emissionSdf, Shader.PropertyToID("_CameraEmissionSDF"));
-				}
-				*/
 
 				// Store texture references for next passes
 				using (var builder = renderGraph.AddRasterRenderPass("CreateFrameData", out PassData passData))
